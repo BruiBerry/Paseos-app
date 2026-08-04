@@ -1,0 +1,11 @@
+# Normaliza los saltos de línea: LF en el repositorio, lo nativo en disco.
+# Sin esto, Windows guarda CRLF y cada archivo aparece como modificado entero.
+* text=auto eol=lf
+
+# Binarios: que Git no intente convertirlos ni mostrarlos como texto.
+*.png binary
+*.jpg binary
+*.ico binary
+
+# El lockfile es generado: colapsarlo en las revisiones de código.
+package-lock.json linguist-generated=true -diff

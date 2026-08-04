@@ -1,0 +1,213 @@
+:root {
+  --tinta: #1A1917;
+  --tinta-2: #5F5E5A;
+  --tinta-3: #888780;
+  --borde: #D3D1C7;
+  --fondo: #FBFAF7;
+  --papel: #FFFFFF;
+  --azul: #185FA5;
+  --verde: #0F6E56;
+  --rojo: #A32D2D;
+  --ambar: #8A6300;
+
+  --r: 10px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--tinta);
+  -webkit-text-size-adjust: 100%;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+h1 { font-size: 20px; font-weight: 500; margin: 0; }
+h2 { font-size: 15px; font-weight: 600; margin: 0; }
+
+/* --- Encabezado de pantalla --- */
+.barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  min-height: 32px;
+}
+
+/* --- Texto --- */
+.tenue { color: var(--tinta-2); }
+.micro { font-size: 13px; color: var(--tinta-3); }
+.error { color: var(--rojo); font-size: 13px; }
+.centrado { text-align: center; }
+.mono { font-variant-numeric: tabular-nums; font-feature-settings: 'tnum'; }
+
+/* --- Tarjetas y listas --- */
+.tarjeta {
+  background: var(--papel);
+  border: 0.5px solid var(--borde);
+  border-radius: var(--r);
+  padding: 12px 14px;
+}
+
+.lista { display: flex; flex-direction: column; gap: 8px; }
+
+.fila {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  background: var(--papel);
+  border: 0.5px solid var(--borde);
+  border-radius: var(--r);
+  padding: 12px 14px;
+  text-align: left;
+  text-decoration: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.fila:active { background: #F4F2ED; }
+.fila .crece { flex: 1; min-width: 0; }
+
+.atenuado { opacity: 0.5; }
+.tachado { text-decoration: line-through; }
+
+/* --- Formularios --- */
+.campo { display: block; margin-bottom: 14px; }
+.campo > span {
+  display: block;
+  font-size: 13px;
+  color: var(--tinta-2);
+  margin-bottom: 4px;
+}
+.campo input,
+.campo select,
+.campo textarea {
+  width: 100%;
+  padding: 10px;
+  font: inherit;
+  font-size: 16px; /* < 16px hace que iOS haga zoom al enfocar */
+  color: inherit;
+  background: var(--papel);
+  border: 0.5px solid var(--borde);
+  border-radius: 8px;
+}
+.campo textarea { resize: vertical; min-height: 64px; }
+.campo .pista { font-size: 12px; color: var(--tinta-3); margin-top: 4px; }
+
+/* --- Botones --- */
+button { font: inherit; }
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 16px;
+  border-radius: 8px;
+  border: 0.5px solid var(--borde);
+  background: var(--papel);
+  color: var(--tinta);
+  cursor: pointer;
+  text-decoration: none;
+}
+.boton:disabled { opacity: 0.45; cursor: default; }
+.boton.primario { background: var(--azul); border-color: var(--azul); color: #fff; }
+.boton.peligro { color: var(--rojo); border-color: var(--rojo); }
+.boton.ancho { width: 100%; }
+.boton.chico { padding: 6px 10px; font-size: 13px; }
+.boton.plano { border-color: transparent; background: transparent; color: var(--azul); padding: 6px 4px; }
+
+/* --- Puntos de color de grupo --- */
+.punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+/* --- Avisos --- */
+.aviso {
+  border: 0.5px solid var(--borde);
+  border-left: 3px solid var(--ambar);
+  border-radius: var(--r);
+  background: var(--papel);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--tinta-2);
+}
+.aviso.info { border-left-color: var(--azul); }
+
+/* --- Hoja inferior (bottom sheet) --- */
+.velo {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 25, 23, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+}
+.hoja {
+  background: var(--papel);
+  width: 100%;
+  max-width: 480px;
+  border-radius: 16px 16px 0 0;
+  padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+  max-height: 88vh;
+  overflow-y: auto;
+}
+@media (min-width: 520px) {
+  .velo { align-items: center; }
+  .hoja { border-radius: 16px; }
+}
+
+/* --- Calendario --- */
+.rejilla-mes {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.celda-dia {
+  aspect-ratio: 1;
+  border: 0.5px solid transparent;
+  border-radius: 8px;
+  background: var(--papel);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px;
+  font: inherit;
+  cursor: pointer;
+}
+.celda-dia.fuera { background: transparent; color: var(--tinta-3); opacity: 0.4; }
+.celda-dia.hoy { border-color: var(--azul); font-weight: 600; }
+.celda-dia.elegido { background: var(--azul); color: #fff; }
+.puntos { display: flex; gap: 2px; align-items: center; min-height: 6px; }
+.puntos .punto { width: 5px; height: 5px; }
+.mas { font-size: 9px; color: var(--tinta-3); line-height: 1; }
+.celda-dia.elegido .mas { color: #fff; }
+
+/* --- Cronómetro --- */
+.reloj {
+  font-size: 56px;
+  font-weight: 300;
+  letter-spacing: -1px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  margin: 8px 0;
+}
+.progreso {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--borde);
+  overflow: hidden;
+}
+.progreso > div { height: 100%; background: var(--verde); transition: width 0.4s linear; }
+.progreso.excedido > div { background: var(--ambar); }
