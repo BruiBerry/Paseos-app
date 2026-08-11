@@ -1,4 +1,6 @@
 import { supabase } from './supabaseClient'
+import { SELECT_PASEO } from './consultas'
+import { hoyISO } from './fechas'
 
 // Crear un paseo, calcular su precio y cerrarlo. Todo lo que toca dinero
 // pasa por acá para que exista un solo lugar donde el precio se congela.
@@ -175,6 +177,84 @@ export async function terminarPaseo(paseoId, { fin = new Date(), duracionSeg, pa
     .eq('paseo_id', paseoId)
     .eq('estado', 'programado')
   if (errorPerros) throw errorPerros
+}
+
+/**
+ * Margen sobre la duración prevista antes de dar un paseo por olvidado.
+ *
+ * La especificación (§189) dice 15 minutos, pero ahí supone que existen los
+ * avisos: primero se notifica, se insiste, y recién si el paseador los ignora
+ * se cierra. Sin notificaciones no hay "los ignoró" que detectar, y cerrar a
+ * los 15 minutos cerraría por la espalda un paseo que de verdad se alargó y
+ * que el paseador está caminando en ese momento — el peor error posible,
+ * porque además marca los perros como completados y toca el cobro.
+ *
+ * Así que hasta que existan los avisos se cierra solo lo que no admite otra
+ * lectura: un paseo de un día anterior, o uno tan excedido que ningún paseo
+ * real dura eso. Volver a los 15 minutos es correcto el día que el aviso
+ * exista y el paseador haya tenido cómo enterarse.
+ */
+export const MARGEN_OLVIDO_MIN = 15
+const MARGEN_SIN_AVISOS_MIN = 180
+
+/**
+ * ¿Este paseo quedó olvidado? Devuelve con qué cerrarlo, o null si sigue vivo.
+ *
+ * Va aparte y sin tocar la red para poder verificarla sin base: decide marcar
+ * perros como completados, y eso entra al cobro del mes.
+ */
+export function cierrePorOlvido(paseo, config, ahoraMs, hoy) {
+  if (!paseo?.inicio_real) return null
+
+  const previstaSeg = duracionPrevistaDePaseo(paseo, config) * 60
+  const pausadoSeg = paseo.pausado_seg ?? 0
+  const inicio = new Date(paseo.inicio_real).getTime()
+  const excedidoSeg = (ahoraMs - inicio) / 1000 - pausadoSeg - previstaSeg
+
+  if (excedidoSeg <= 0) return null
+  if (paseo.fecha >= hoy && excedidoSeg <= MARGEN_SIN_AVISOS_MIN * 60) return null
+
+  // El fin se calcula, no se pone "ahora": el paseo se cierra con la duración
+  // prevista, así que la hora de término es la que habría tenido si se
+  // hubiera cerrado a tiempo. Poner `ahora` inventaría en el historial un
+  // paseo de catorce horas que nadie caminó.
+  return {
+    fin: new Date(inicio + (pausadoSeg + previstaSeg) * 1000),
+    duracionSeg: previstaSeg,
+    pausadoSeg,
+    automatico: true
+  }
+}
+
+/**
+ * Cierra los paseos que quedaron corriendo, con la duración prevista y en
+ * estado `cerrado_automaticamente` para que se revisen (spec §189).
+ *
+ * Corre en el cliente, al abrir Hoy. Eso significa que un paseo olvidado se
+ * cierra la próxima vez que el paseador abre la app, no en el momento: sin
+ * app abierta no hay JavaScript corriendo. La versión que cierra sola de
+ * verdad es una función agendada en la base.
+ */
+export async function cerrarOlvidados(paseadorId, config) {
+  const { data, error } = await supabase
+    .from('paseo')
+    .select(SELECT_PASEO)
+    .eq('paseador_id', paseadorId)
+    .eq('estado', 'en_curso')
+  if (error) throw error
+
+  const ahora = Date.now()
+  const hoy = hoyISO()
+  let cerrados = 0
+
+  for (const paseo of data ?? []) {
+    const cierre = cierrePorOlvido(paseo, config, ahora, hoy)
+    if (!cierre) continue
+    await terminarPaseo(paseo.id, cierre)
+    cerrados++
+  }
+
+  return cerrados
 }
 
 /** Cancelar no borra: cambia el estado y deja de cobrarse (spec §4). */

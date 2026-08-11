@@ -16,9 +16,13 @@ La cascada de duración está completa desde que se agregaron
 `paseo.duracion_min` y `paseo.pausado_seg` (11 de agosto de 2026). Los dos
 huecos del esquema que bloqueaban parte de la especificación ya no existen.
 
-Sin construir, en orden de valor: cierre automático de paseos olvidados,
-feed `.ics`, materialización como Edge Function, notificaciones push y
-correos (necesitan servidor), offline completo, layout de escritorio.
+Sin construir, en orden de valor: feed `.ics`, cierre y materialización
+agendados en la base, notificaciones push y correos (necesitan servidor),
+offline completo, layout de escritorio.
+
+El despliegue es Vercel, conectado a `main`: cada push publica. `vercel.json`
+tiene el rewrite de SPA, sin el cual recargar en `/paseo/:id` daría 404, y
+saca del caché a `sw.js` para que la PWA pueda actualizarse sola.
 
 **La materialización corre en el cliente**, al abrir Hoy, una vez al día
 (`materializarUnaVezAlDia`). Si el paseador no abre la app, no se generan
@@ -46,6 +50,13 @@ la escritura queda encolada y la base todavía tiene el total anterior.
 Todo lo que toca dinero pasa por `src/lib/paseos.js`.
 
 **El recargo por perro adicional se cuenta por casa, no por grupo.**
+
+**El cierre automático usa 180 minutos, no los 15 de la especificación.**
+La spec supone que existen los avisos: notifica, insiste, y recién entonces
+cierra. Sin notificaciones no hay "los ignoró" que detectar, y cerrar a los
+15 minutos mataría por la espalda un paseo que de verdad se alargó — y de
+paso marcaría los perros como completados, que es dinero. Con avisos, vuelve
+a 15: la constante `MARGEN_OLVIDO_MIN` ya está escrita esperando ese día.
 
 **Nada se borra.** Cancelar cambia el estado; dar de baja marca
 `activo = false`. La única excepción escrita a propósito: al pausar una regla

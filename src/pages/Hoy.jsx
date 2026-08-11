@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient'
 import { useSesion } from '../lib/sesion'
 import { hoyISO, fechaLarga, hora as soloHora, horaMas, duracionCorta } from '../lib/fechas'
-import { duracionPrevistaDePaseo, iniciarPaseo } from '../lib/paseos'
+import { duracionPrevistaDePaseo, iniciarPaseo, cerrarOlvidados } from '../lib/paseos'
 import { materializarUnaVezAlDia } from '../lib/recurrentes'
 import { SELECT_PASEO, tituloPaseo, clientesDePaseo } from '../lib/consultas'
 import { distanciaM, ubicacionActual } from '../lib/geo'
@@ -39,6 +39,17 @@ export default function Hoy() {
       .then((creados) => { if (creados > 0) cargar() })
       .catch((e) => console.error('No se pudieron generar los paseos recurrentes', e))
   }, [paseadorId, cargar])
+
+  // Cierra los paseos que quedaron corriendo (spec §189). Espera a `config`
+  // porque la duración prevista depende de ella: sin config, la cascada caería
+  // al default de 60 minutos y podría cerrar con una duración que no es la de
+  // este paseador.
+  useEffect(() => {
+    if (!paseadorId || cargandoConfig) return
+    cerrarOlvidados(paseadorId, config)
+      .then((cerrados) => { if (cerrados > 0) cargar() })
+      .catch((e) => console.error('No se pudieron cerrar los paseos olvidados', e))
+  }, [paseadorId, config, cargandoConfig, cargar])
 
   // Proximidad: solo se pide el GPS si hay algo pendiente que pueda gatillarlo.
   useEffect(() => {
