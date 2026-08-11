@@ -1,4 +1,4 @@
-import { iniciarPaseo, terminarPaseo, cancelarPaseo } from './paseos'
+import { iniciarPaseo, terminarPaseo, cancelarPaseo, registrarPausa } from './paseos'
 
 // Cola de escrituras pendientes para el cronómetro.
 //
@@ -32,10 +32,13 @@ async function ejecutar(accion) {
   switch (accion.tipo) {
     case 'iniciar':
       return iniciarPaseo(accion.paseoId, new Date(accion.inicio))
+    case 'pausa':
+      return registrarPausa(accion.paseoId, accion.pausadoSeg)
     case 'terminar':
       return terminarPaseo(accion.paseoId, {
         fin: new Date(accion.fin),
         duracionSeg: accion.duracionSeg,
+        pausadoSeg: accion.pausadoSeg,
         automatico: accion.automatico
       })
     case 'cancelar':

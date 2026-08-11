@@ -181,6 +181,7 @@ function HojaAgendar({ fecha, onCerrar, onListo }) {
   const [grupoId, setGrupoId] = useState('')
   const [seleccion, setSeleccion] = useState(new Set())
   const [hora, setHora] = useState('09:00')
+  const [duracionMin, setDuracionMin] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState(null)
 
@@ -223,7 +224,8 @@ function HojaAgendar({ fecha, onCerrar, onListo }) {
         grupoId: modo === 'grupo' ? grupoId : null,
         fecha,
         hora,
-        perroIds
+        perroIds,
+        duracionMin: Number(duracionMin) || null
       })
       onListo()
     } catch (err) {
@@ -276,6 +278,20 @@ function HojaAgendar({ fecha, onCerrar, onListo }) {
 
         <Campo etiqueta="Hora">
           <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} required />
+        </Campo>
+
+        <Campo
+          etiqueta="Duración"
+          pista="Solo para este paseo. Vacía sigue la cascada normal: la regla recurrente, si no la más larga de los perros que van, si no la duración por defecto."
+        >
+          <input
+            type="number"
+            inputMode="numeric"
+            min="1"
+            placeholder="min"
+            value={duracionMin}
+            onChange={(e) => setDuracionMin(e.target.value)}
+          />
         </Campo>
 
         <p className="micro">

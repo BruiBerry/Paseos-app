@@ -12,17 +12,18 @@ El README explica cómo levantar el proyecto y en qué orden usar las pantallas.
 Construido y compilando: clientes, perros, grupos con reglas recurrentes,
 calendario mensual, cronómetro y cobros. El login ya existía.
 
-Sin construir, en orden de valor: notificaciones push y correos (necesitan
-servidor), cierre automático de paseos olvidados, materialización como Edge
-Function, offline completo, feed `.ics`, layout de escritorio.
+La cascada de duración está completa desde que se agregaron
+`paseo.duracion_min` y `paseo.pausado_seg` (11 de agosto de 2026). Los dos
+huecos del esquema que bloqueaban parte de la especificación ya no existen.
 
-Dos huecos del esquema que bloquean parte de la especificación:
+Sin construir, en orden de valor: cierre automático de paseos olvidados,
+feed `.ics`, materialización como Edge Function, notificaciones push y
+correos (necesitan servidor), offline completo, layout de escritorio.
 
-- **La pausa del cronómetro no tiene columna.** Se acumula en `localStorage`
-  y se descuenta al cerrar, así que la base guarda la duración ya limpia.
-- **No existe `paseo.duracion_min`.** El paso 1 de la cascada de duración
-  (escribirla a mano al agendar) no se puede guardar; la cascada parte hoy
-  en la regla recurrente.
+**La materialización corre en el cliente**, al abrir Hoy, una vez al día
+(`materializarUnaVezAlDia`). Si el paseador no abre la app, no se generan
+paseos. El horizonte de 8 semanas da colchón de sobra, pero es la razón por
+la que la especificación la quiere como proceso diario del servidor.
 
 ## Reglas que no se negocian
 
@@ -33,6 +34,13 @@ ya estuvo una vez en `Hoy.jsx`.
 **El cronómetro no cuenta segundos.** Guarda la hora de inicio y calcula
 `ahora − inicio − pausado` en cada despertar. iOS suspende el JavaScript en
 segundo plano; un contador que suma de a uno pierde justo el tiempo del paseo.
+
+**La pausa se escribe al reanudar, no al pausar,** y como total absoluto, no
+como incremento: la cola reintenta, y sumar dos veces inflaría la pausa y
+acortaría el paseo. `duracion_seg` va limpia y `pausado_seg` aparte, para
+poder explicar después por qué el reloj no cuadra con `fin_real − inicio_real`.
+`localStorage` quedó como espejo y le gana a la base al leer, porque sin señal
+la escritura queda encolada y la base todavía tiene el total anterior.
 
 **Los precios se congelan al crear el paseo** y no se recalculan nunca.
 Todo lo que toca dinero pasa por `src/lib/paseos.js`.

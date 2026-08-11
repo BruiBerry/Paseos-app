@@ -118,10 +118,12 @@ create table paseo (
   recurrente_id uuid references paseo_recurrente(id) on delete set null,
   fecha date not null,
   hora_programada time not null,
+  duracion_min integer,              -- paso 1 de la cascada; null = sigue al paso 2
   estado estado_paseo not null default 'programado',
   inicio_real timestamptz,
   fin_real timestamptz,
-  duracion_seg integer,
+  duracion_seg integer,              -- duración final, ya sin las pausas
+  pausado_seg integer not null default 0,
   inicio_automatico boolean not null default false,
   notas text
 );

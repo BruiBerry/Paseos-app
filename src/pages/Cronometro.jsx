@@ -9,7 +9,8 @@ import {
   iniciarPaseo,
   terminarPaseo,
   cancelarPaseo,
-  cancelarPerroEnPaseo
+  cancelarPerroEnPaseo,
+  registrarPausa
 } from '../lib/paseos'
 import { SELECT_PASEO, tituloPaseo, clientesDePaseo } from '../lib/consultas'
 import { encolar, vaciarCola } from '../lib/cola'
@@ -23,6 +24,11 @@ import { Barra, Cargando, ErrorCarga, Punto } from '../components/ui'
 //
 // El intervalo de un segundo existe solo para repintar; el número siempre
 // sale del reloj, nunca de acumular.
+//
+// El total pausado vive en `paseo.pausado_seg` y se escribe al reanudar.
+// `localStorage` quedó como espejo, no como fuente: sin señal la escritura
+// se encola, así que entre la pausa y la sincronización el valor local es el
+// único que está al día. Por eso al cargar gana el local cuando existe.
 
 const claveLocal = (id) => `paseo:cronometro:${id}`
 
@@ -43,12 +49,12 @@ function borrarLocal(id) {
   localStorage.removeItem(claveLocal(id))
 }
 
-function transcurridoSeg(inicioISO, local) {
+function transcurridoSeg(inicioISO, acumuladaSeg, pausaDesde) {
   if (!inicioISO) return 0
   const ahora = Date.now()
-  const pausaEnCurso = local?.pausaDesde ? (ahora - new Date(local.pausaDesde).getTime()) / 1000 : 0
+  const pausaEnCurso = pausaDesde ? (ahora - new Date(pausaDesde).getTime()) / 1000 : 0
   const bruto = (ahora - new Date(inicioISO).getTime()) / 1000
-  return Math.max(0, bruto - (local?.pausaAcumuladaSeg ?? 0) - pausaEnCurso)
+  return Math.max(0, bruto - acumuladaSeg - pausaEnCurso)
 }
 
 export default function Cronometro() {
@@ -113,6 +119,11 @@ export default function Cronometro() {
   const previstaMin = duracionPrevistaDePaseo(paseo, config)
   const previstaSeg = previstaMin * 60
 
+  // El local gana porque puede ir adelante de la base: si la escritura de la
+  // última pausa quedó en la cola, la base todavía tiene el total anterior.
+  const pausaAcumulada = local?.pausaAcumuladaSeg ?? paseo.pausado_seg ?? 0
+  const pausaDesde = local?.pausaDesde ?? null
+
   async function intentar(accion, alFallar) {
     try {
       await accion()
@@ -137,39 +148,50 @@ export default function Cronometro() {
   }
 
   // La pausa es para el tiempo real de entrar a la casa, dejar al perro y
-  // llenar el agua. No tiene columna en el esquema, así que vive en este
-  // dispositivo y se descuenta al cerrar: lo que se guarda en la base es la
-  // duración final, ya sin las pausas.
+  // llenar el agua.
+  //
+  // Empezarla no toca la base: todavía no hay nada que guardar, y escribir al
+  // reanudar significa que una pausa abierta cuando el teléfono se queda sin
+  // batería no descuenta nada. Es el error que conviene: cobrar el paseo
+  // completo y arreglarlo a mano es mejor que descontar una pausa que quedó
+  // corriendo toda la noche.
   function alPausar() {
     setLocal(guardarLocal(id, {
       inicio,
-      pausaAcumuladaSeg: local?.pausaAcumuladaSeg ?? 0,
+      pausaAcumuladaSeg: pausaAcumulada,
       pausaDesde: new Date().toISOString()
     }))
   }
 
-  function alReanudar() {
-    const extra = local?.pausaDesde ? (Date.now() - new Date(local.pausaDesde).getTime()) / 1000 : 0
-    setLocal(guardarLocal(id, {
-      inicio,
-      pausaAcumuladaSeg: (local?.pausaAcumuladaSeg ?? 0) + extra,
-      pausaDesde: null
-    }))
+  async function alReanudar() {
+    const extra = pausaDesde ? (Date.now() - new Date(pausaDesde).getTime()) / 1000 : 0
+    const total = Math.round(pausaAcumulada + extra)
+    setLocal(guardarLocal(id, { inicio, pausaAcumuladaSeg: total, pausaDesde: null }))
+    setPaseo((p) => ({ ...p, pausado_seg: total }))
+    await intentar(
+      () => registrarPausa(id, total),
+      { tipo: 'pausa', paseoId: id, pausadoSeg: total }
+    )
   }
 
   async function alTerminar() {
     const fin = new Date()
-    const segundos = Math.round(transcurridoSeg(inicio, local))
+    // Una pausa abierta al apretar Terminar cuenta hasta este momento, si no
+    // el tramo entre pausar y cerrar se cobraría como paseo.
+    const enCurso = pausaDesde ? (Date.now() - new Date(pausaDesde).getTime()) / 1000 : 0
+    const pausado = Math.round(pausaAcumulada + enCurso)
+    const segundos = Math.round(transcurridoSeg(inicio, pausaAcumulada, pausaDesde))
     guardarLocal(id, { ...(local ?? { inicio }), cerrado: true })
     setPaseo((p) => ({
       ...p,
       estado: 'completado',
       fin_real: fin.toISOString(),
-      duracion_seg: segundos
+      duracion_seg: segundos,
+      pausado_seg: pausado
     }))
     const ok = await intentar(
-      () => terminarPaseo(id, { fin, duracionSeg: segundos }),
-      { tipo: 'terminar', paseoId: id, fin: fin.toISOString(), duracionSeg: segundos }
+      () => terminarPaseo(id, { fin, duracionSeg: segundos, pausadoSeg: pausado }),
+      { tipo: 'terminar', paseoId: id, fin: fin.toISOString(), duracionSeg: segundos, pausadoSeg: pausado }
     )
     if (ok) { borrarLocal(id); setLocal(null); cargar() }
   }
@@ -196,7 +218,7 @@ export default function Cronometro() {
     }
   }
 
-  const segundos = transcurridoSeg(inicio, local)
+  const segundos = transcurridoSeg(inicio, pausaAcumulada, pausaDesde)
   const mostrado = cerrado ? (paseo.duracion_seg ?? segundos) : segundos
   const excedido = mostrado > previstaSeg
   const avance = Math.min(100, (mostrado / previstaSeg) * 100)
@@ -222,13 +244,13 @@ export default function Cronometro() {
         </div>
       ) : (
         <>
-          <div className={`reloj${local?.pausaDesde ? ' tenue' : ''}`}>{reloj(mostrado)}</div>
+          <div className={`reloj${pausaDesde ? ' tenue' : ''}`}>{reloj(mostrado)}</div>
 
           <div className={`progreso${excedido ? ' excedido' : ''}`}>
             <div style={{ width: `${avance}%` }} />
           </div>
           <p className="micro centrado" style={{ marginTop: 6 }}>
-            {local?.pausaDesde
+            {pausaDesde
               ? 'En pausa'
               : excedido
                 ? `${duracionCorta(mostrado - previstaSeg)} por sobre lo previsto`
@@ -252,9 +274,9 @@ export default function Cronometro() {
                 <button
                   className="boton"
                   style={{ flex: 1 }}
-                  onClick={local?.pausaDesde ? alReanudar : alPausar}
+                  onClick={pausaDesde ? alReanudar : alPausar}
                 >
-                  {local?.pausaDesde ? 'Reanudar' : 'Pausar'}
+                  {pausaDesde ? 'Reanudar' : 'Pausar'}
                 </button>
                 <button className="boton primario" style={{ flex: 1 }} onClick={alTerminar}>
                   Terminar

@@ -16,16 +16,18 @@ export async function perrosDeGrupo(grupoId) {
 
 /**
  * Cascada de duración prevista, en minutos (spec §4):
- *   1. la de la regla recurrente, si la fija
- *   2. si no, la más larga entre los perros que participan — no se puede
+ *   1. la escrita a mano al agendar ese paseo (`paseo.duracion_min`)
+ *   2. si no, la de la regla recurrente
+ *   3. si no, la más larga entre los perros que participan — no se puede
  *      pasear a uno 45 minutos y a otro 60 al mismo tiempo
- *   3. si no, la default del paseador
+ *   4. si no, la default del paseador
  *
- * El paso 1 de la especificación ("duración escrita a mano al agendar ese
- * paseo") no tiene columna en `paseo`, así que hoy no se puede guardar.
- * Requiere agregar `paseo.duracion_min`.
+ * Cada paso se salta con null, no con cero: `duracion_min = 0` no es un
+ * paseo de duración indefinida, es un dato malo, y dejarlo caer al paso
+ * siguiente es más útil que mostrar un cronómetro que nace excedido.
  */
-export function duracionPrevistaMin({ recurrenteMin, perros, config }) {
+export function duracionPrevistaMin({ propiaMin, recurrenteMin, perros, config }) {
+  if (propiaMin) return propiaMin
   if (recurrenteMin) return recurrenteMin
 
   const propias = (perros ?? []).map((p) => p?.duracion_min).filter(Boolean)
@@ -37,6 +39,7 @@ export function duracionPrevistaMin({ recurrenteMin, perros, config }) {
 /** La misma cascada, leyendo un paseo tal como lo devuelven las consultas. */
 export function duracionPrevistaDePaseo(paseo, config) {
   return duracionPrevistaMin({
+    propiaMin: paseo?.duracion_min,
     recurrenteMin: paseo?.paseo_recurrente?.duracion_min,
     perros: (paseo?.paseo_perro ?? []).map((pp) => pp.perro),
     config
@@ -82,7 +85,7 @@ export async function calcularPrecios(perroIds) {
  * falla se borra el paseo, porque uno sin filas de perro no se cobra nunca
  * y no hay nada en la interfaz que delate que quedó a medias.
  */
-export async function crearPaseo(paseadorId, { grupoId = null, recurrenteId = null, fecha, hora, perroIds }) {
+export async function crearPaseo(paseadorId, { grupoId = null, recurrenteId = null, fecha, hora, perroIds, duracionMin = null }) {
   if (!perroIds?.length) throw new Error('Un paseo necesita al menos un perro.')
 
   const { data: paseo, error } = await supabase
@@ -92,7 +95,8 @@ export async function crearPaseo(paseadorId, { grupoId = null, recurrenteId = nu
       grupo_id: grupoId,
       recurrente_id: recurrenteId,
       fecha,
-      hora_programada: hora
+      hora_programada: hora,
+      duracion_min: duracionMin || null
     })
     .select('id')
     .single()
@@ -132,13 +136,34 @@ export async function iniciarPaseo(paseoId, inicio = new Date()) {
   return inicio
 }
 
-export async function terminarPaseo(paseoId, { fin = new Date(), duracionSeg, automatico = false }) {
+/**
+ * Guarda el total pausado hasta ahora. Se llama al reanudar, no al pausar:
+ * mientras la pausa corre todavía no se sabe cuánto va a durar.
+ *
+ * Es un total absoluto y no un incremento a propósito. Si el reintento de la
+ * cola la manda dos veces —que pasa seguido, porque esto se usa sin señal—
+ * escribir el mismo total dos veces no hace nada, mientras que sumar dos
+ * veces inflaría la pausa y acortaría el paseo.
+ */
+export async function registrarPausa(paseoId, pausadoSeg) {
+  const { error } = await supabase
+    .from('paseo')
+    .update({ pausado_seg: Math.max(0, Math.round(pausadoSeg)) })
+    .eq('id', paseoId)
+  if (error) throw error
+}
+
+export async function terminarPaseo(paseoId, { fin = new Date(), duracionSeg, pausadoSeg = 0, automatico = false }) {
   const { error } = await supabase
     .from('paseo')
     .update({
       estado: automatico ? 'cerrado_automaticamente' : 'completado',
       fin_real: fin.toISOString(),
-      duracion_seg: Math.max(0, Math.round(duracionSeg))
+      // `duracion_seg` va limpia, sin las pausas; `pausado_seg` queda aparte
+      // para poder explicar después por qué el reloj no cuadra con
+      // fin_real − inicio_real.
+      duracion_seg: Math.max(0, Math.round(duracionSeg)),
+      pausado_seg: Math.max(0, Math.round(pausadoSeg))
     })
     .eq('id', paseoId)
   if (error) throw error

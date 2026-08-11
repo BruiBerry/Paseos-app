@@ -9,7 +9,7 @@
 // blanco entre un paréntesis de cierre y el siguiente, así que indentar un
 // embed anidado devuelve 400. Compacto es la única forma segura.
 export const SELECT_PASEO = [
-  'id,fecha,hora_programada,estado,inicio_real,fin_real,duracion_seg,notas',
+  'id,fecha,hora_programada,duracion_min,estado,inicio_real,fin_real,duracion_seg,pausado_seg,notas',
   'grupo(id,nombre,color_hex,zona)',
   'paseo_recurrente(id,duracion_min)',
   'paseo_perro(perro_id,precio_cobrado,se_cobra,estado,motivo_cancelacion,' +
