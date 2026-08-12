@@ -57,7 +57,7 @@ export default function Grupo() {
     setGenerando('trabajando')
     try {
       olvidarUltimaCorrida()
-      const creados = await materializar(paseadorId)
+      const creados = await materializar()
       setGenerando(`${creados} ${creados === 1 ? 'paseo generado' : 'paseos generados'}`)
     } catch (e) {
       console.error(e)

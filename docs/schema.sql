@@ -207,31 +207,14 @@ create policy "propio" on grupo_perro
 -- =========================================================
 
 -- Duración de un perro: propia, o la default del paseador
--- OBSOLETAS. No las llama nadie, y la cascada que implementan quedó a medias:
--- solo hacen `perro.duracion_min -> duracion_default_min`, saltándose los dos
--- primeros pasos (`paseo.duracion_min` y la regla recurrente) que sí existen
--- desde agosto de 2026. La cascada buena y única vive en `src/lib/duracion.js`.
+-- La cascada de duracion completa (spec 167) vive en
+-- fn_duracion_prevista_paseo, creada en docs/migraciones/002. Reemplazo a
+-- fn_duracion_perro y fn_duracion_paseo, que se saltaban los dos primeros
+-- pasos y quedaron del esquema original; esa migracion las elimina.
 --
--- Se dejan porque `pg_cron` va a necesitar calcular la duración en SQL para
--- cerrar paseos olvidados sin navegador. Ese día hay que arreglarlas, no
--- confiar en ellas: una duración mal calculada cierra paseos con el largo
--- equivocado, y eso llega al cobro.
-create or replace function fn_duracion_perro(p_perro_id uuid)
-returns integer language sql stable as $$
-  select coalesce(
-    p.duracion_min,
-    (select c.duracion_default_min from configuracion c where c.paseador_id = p.paseador_id)
-  )
-  from perro p where p.id = p_perro_id;
-$$;
-
--- Duración de un paseo dado el conjunto de perros que participan:
--- la más larga entre ellos, salvo que el paseo o la regla la fijen a mano
-create or replace function fn_duracion_paseo(p_perro_ids uuid[])
-returns integer language sql stable as $$
-  select max(fn_duracion_perro(id)) from unnest(p_perro_ids) as id;
-$$;
-
+-- Es la misma regla que src/lib/duracion.js aplica en el navegador. Estan
+-- duplicadas porque el cierre agendado corre sin navegador y tiene que
+-- calcularla en SQL: si cambia una, hay que cambiar la otra.
 -- Precio de los perros de UN cliente dentro de un mismo paseo:
 -- el primero paga tarifa completa, los siguientes pagan el recargo.
 -- Devuelve (perro_id, precio) para que el llamador arme paseo_perro.

@@ -16,8 +16,15 @@ La cascada de duración está completa desde que se agregaron
 `paseo.duracion_min` y `paseo.pausado_seg` (11 de agosto de 2026). Los dos
 huecos del esquema que bloqueaban parte de la especificación ya no existen.
 
-Sin construir, en orden de valor: cierre y materialización agendados en la
-base, notificaciones push y correos, offline completo, layout de escritorio.
+Sin construir, en orden de valor: notificaciones push y correos, offline
+completo, pedir la instalación en el onboarding, layout de escritorio.
+
+**El cierre y la materialización corren en la base, con `pg_cron`.** El
+cierre cada hora, la materialización a las 07:00 UTC. La lógica vive solo en
+SQL; el navegador llama a las mismas funciones por RPC al abrir Hoy, para ver
+el efecto de inmediato en vez de esperar la próxima corrida. Las funciones
+`_todos` son SECURITY DEFINER —un job de cron no tiene `auth.uid()`— y
+tienen el execute revocado de `anon` y `authenticated`.
 
 El despliegue es Vercel, conectado a `main`: cada push publica. `vercel.json`
 tiene el rewrite de SPA, sin el cual recargar en `/paseo/:id` daría 404, y
@@ -100,11 +107,13 @@ están separados de todo lo que toca la red. Al escribir esas pruebas en la
 línea de comandos, ojo con las barras invertidas: pasan por bash y por JS, y
 una prueba del escapado de `.ics` puede fallar por el shell y no por el código.
 
-**`fn_duracion_perro` y `fn_duracion_paseo` están obsoletas.** No las llama
-nadie y solo implementan los dos últimos pasos de la cascada. Hay que
-arreglarlas cuando `pg_cron` necesite calcular duraciones en SQL, no darlas
-por buenas: una duración mal calculada cierra paseos con el largo equivocado
-y eso llega al cobro.
+**La cascada de duración está escrita dos veces, a propósito.** En
+`src/lib/duracion.js` para el navegador y en `fn_duracion_prevista_paseo`
+para la base, porque el cierre agendado corre sin navegador y tiene que
+calcularla en SQL. Es la única duplicación deliberada del proyecto: si
+cambias una, cambia la otra. Ojo con el cero — en SQL hay que escribir
+`nullif(x, 0)` en cada paso, porque `coalesce` solo salta los nulos y un
+`duracion_min = 0` cerraría el paseo con duración cero.
 
 **La cascada de duración vive en `duracion.js`, no en `paseos.js`.** La
 comparten el navegador y la función de servidor del feed; `paseos.js` importa

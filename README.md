@@ -46,6 +46,21 @@ service worker pueda actualizarse.
 La llave `anon` termina incrustada en el JavaScript público. Es su diseño:
 quien protege los datos es RLS, no el secreto de la llave.
 
+## Procesos agendados
+
+Dos cosas corren solas dentro de Postgres, con `pg_cron`:
+
+- **Materializar** las reglas recurrentes en filas reales de `paseo`,
+  manteniendo 8 semanas hacia adelante. Diaria, 07:00 UTC (madrugada en Chile).
+- **Cerrar** los paseos que quedaron `en_curso` porque se olvidó apretar
+  Terminar. Cada hora.
+
+La lógica vive solo en SQL. La app llama a las mismas funciones al abrir Hoy
+para ver el efecto de inmediato, pero no depende de eso: aunque nadie abra la
+app, los paseos se generan y los olvidados se cierran.
+
+Para ver o cambiar los horarios: `select * from cron.job;`
+
 ## Feed de calendario
 
 `/api/calendario/<token>` publica la agenda como `.ics` para suscribirla en
@@ -118,9 +133,6 @@ anidado devuelve 400 en tiempo de ejecución, no al compilar.
 
 - **Notificaciones push y correos.** Los horarios se guardan en Ajustes,
   pero no se envía nada: necesita trabajo de servidor.
-- **Cierre y materialización agendados en la base.** Los dos corren hoy en el
-  navegador al abrir la app: si el paseador no la abre, no pasan. Mover ambos
-  a `pg_cron` es la misma pieza de trabajo.
 - **Offline completo.** Solo el cronómetro sobrevive sin señal (cola en
   `localStorage`). El resto de las pantallas requiere conexión.
 - **Pedir la instalación en el onboarding.** El push en iOS solo llega si la

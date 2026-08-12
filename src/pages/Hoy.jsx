@@ -31,25 +31,25 @@ export default function Hoy() {
 
   useEffect(() => { cargar() }, [cargar])
 
-  // La materialización rellena el horizonte de paseos recurrentes. Corre una
-  // vez al día en segundo plano; si genera algo, hay que releer el día.
+  // La materialización rellena el horizonte de paseos recurrentes. pg_cron la
+  // corre todas las madrugadas; esto es la red de seguridad por si el
+  // agendamiento se cayera, y cuesta una sola llamada al día por dispositivo.
   useEffect(() => {
     if (!paseadorId) return
-    materializarUnaVezAlDia(paseadorId)
+    materializarUnaVezAlDia()
       .then((creados) => { if (creados > 0) cargar() })
       .catch((e) => console.error('No se pudieron generar los paseos recurrentes', e))
   }, [paseadorId, cargar])
 
-  // Cierra los paseos que quedaron corriendo (spec §189). Espera a `config`
-  // porque la duración prevista depende de ella: sin config, la cascada caería
-  // al default de 60 minutos y podría cerrar con una duración que no es la de
-  // este paseador.
+  // Cierra los paseos que quedaron corriendo (spec §189). pg_cron ya lo hace
+  // cada hora sin navegador; esta llamada existe para que el paseador vea el
+  // efecto al abrir la app en vez de esperar a la próxima corrida.
   useEffect(() => {
-    if (!paseadorId || cargandoConfig) return
-    cerrarOlvidados(paseadorId, config)
+    if (!paseadorId) return
+    cerrarOlvidados()
       .then((cerrados) => { if (cerrados > 0) cargar() })
       .catch((e) => console.error('No se pudieron cerrar los paseos olvidados', e))
-  }, [paseadorId, config, cargandoConfig, cargar])
+  }, [paseadorId, cargar])
 
   // Proximidad: solo se pide el GPS si hay algo pendiente que pueda gatillarlo.
   useEffect(() => {
