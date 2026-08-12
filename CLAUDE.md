@@ -100,6 +100,12 @@ están separados de todo lo que toca la red. Al escribir esas pruebas en la
 línea de comandos, ojo con las barras invertidas: pasan por bash y por JS, y
 una prueba del escapado de `.ics` puede fallar por el shell y no por el código.
 
+**`fn_duracion_perro` y `fn_duracion_paseo` están obsoletas.** No las llama
+nadie y solo implementan los dos últimos pasos de la cascada. Hay que
+arreglarlas cuando `pg_cron` necesite calcular duraciones en SQL, no darlas
+por buenas: una duración mal calculada cierra paseos con el largo equivocado
+y eso llega al cobro.
+
 **La cascada de duración vive en `duracion.js`, no en `paseos.js`.** La
 comparten el navegador y la función de servidor del feed; `paseos.js` importa
 el cliente de Supabase y no carga fuera de Vite. `paseos.js` la reexporta,

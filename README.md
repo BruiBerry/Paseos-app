@@ -27,6 +27,38 @@ Los usuarios se crean a mano en **Authentication → Users**. Un trigger
 (`fn_nuevo_paseador`) les arma la fila en `paseador` y su `configuracion`
 con valores por defecto, así que la cuenta queda lista sin pasos extra.
 
+El esquema inicial es [docs/schema.sql](docs/schema.sql). Los cambios
+posteriores viven en [docs/migraciones/](docs/migraciones/), numerados, y se
+ejecutan a mano en el editor SQL de Supabase. `schema.sql` se mantiene al día
+para que siempre refleje la base real.
+
+## Despliegue
+
+Está en Vercel, conectado a `main`: cada push publica. Las dos variables
+`VITE_*` se configuran en el panel del proyecto — se incrustan al compilar,
+así que agregarlas después obliga a un *Redeploy*.
+
+`vercel.json` hace dos cosas que no son opcionales: el rewrite que manda todo
+a `index.html` (sin él, recargar en `/paseo/:id` da 404, que en una PWA
+instalada es fatal) excluyendo `/api`, y sacar `sw.js` del caché para que el
+service worker pueda actualizarse.
+
+La llave `anon` termina incrustada en el JavaScript público. Es su diseño:
+quien protege los datos es RLS, no el secreto de la llave.
+
+## Feed de calendario
+
+`/api/calendario/<token>` publica la agenda como `.ics` para suscribirla en
+el calendario del teléfono. La dirección se saca de Ajustes.
+
+**La URL es la contraseña**: no pide sesión, así que quien la tenga ve la
+agenda. Es regenerable desde la misma pantalla.
+
+Lo pide una app de calendario, que no puede autenticarse, así que la consulta
+pasa por `fn_agenda_por_token` — SECURITY DEFINER, valida el token dentro de
+la base. Por eso al servidor le basta la llave `anon` y la `service_role`
+nunca sale de Supabase.
+
 ## Cómo empezar a usarla
 
 El orden importa: los paseos cuelgan de los grupos, y los grupos de los perros.
@@ -86,14 +118,12 @@ anidado devuelve 400 en tiempo de ejecución, no al compilar.
 
 - **Notificaciones push y correos.** Los horarios se guardan en Ajustes,
   pero no se envía nada: necesita trabajo de servidor.
-- **Cierre automático de paseos olvidados.** Hoy el cronómetro solo avisa
-  en pantalla que se pasó de la duración prevista.
-- **Materialización como Edge Function.** Corre en el navegador al abrir la
-  app, una vez al día. La lógica de `src/lib/recurrentes.js` se mueve tal cual.
+- **Cierre y materialización agendados en la base.** Los dos corren hoy en el
+  navegador al abrir la app: si el paseador no la abre, no pasan. Mover ambos
+  a `pg_cron` es la misma pieza de trabajo.
 - **Offline completo.** Solo el cronómetro sobrevive sin señal (cola en
   `localStorage`). El resto de las pantallas requiere conexión.
-- **Feed `.ics`.** El esquema todavía no tiene columna para el token.
-- **`paseo.duracion_min`.** La especificación permite escribir a mano la
-  duración al agendar un paseo, pero no hay dónde guardarla: la cascada parte
-  hoy en la regla recurrente.
+- **Pedir la instalación en el onboarding.** El push en iOS solo llega si la
+  app está instalada en la pantalla de inicio, así que pedirlo no puede
+  quedar escondido en Ajustes (especificación §6).
 - **Layout de escritorio.** Todo está pensado a 480 px de ancho.

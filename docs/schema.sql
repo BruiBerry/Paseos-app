@@ -207,6 +207,15 @@ create policy "propio" on grupo_perro
 -- =========================================================
 
 -- Duración de un perro: propia, o la default del paseador
+-- OBSOLETAS. No las llama nadie, y la cascada que implementan quedó a medias:
+-- solo hacen `perro.duracion_min -> duracion_default_min`, saltándose los dos
+-- primeros pasos (`paseo.duracion_min` y la regla recurrente) que sí existen
+-- desde agosto de 2026. La cascada buena y única vive en `src/lib/duracion.js`.
+--
+-- Se dejan porque `pg_cron` va a necesitar calcular la duración en SQL para
+-- cerrar paseos olvidados sin navegador. Ese día hay que arreglarlas, no
+-- confiar en ellas: una duración mal calculada cierra paseos con el largo
+-- equivocado, y eso llega al cobro.
 create or replace function fn_duracion_perro(p_perro_id uuid)
 returns integer language sql stable as $$
   select coalesce(
