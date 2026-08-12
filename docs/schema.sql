@@ -29,7 +29,13 @@ create table configuracion (
   duracion_default_min integer not null default 60,
   radio_geocerca_m integer not null default 100,
   hora_resumen_diario time not null default '07:30',
-  minutos_aviso_previo integer not null default 30
+  minutos_aviso_previo integer not null default 30,
+  -- Feed .ics (spec §7). La URL es la contraseña, así que el token es un
+  -- valor aleatorio y regenerable, nunca el id del paseador.
+  token_calendario text not null unique
+    default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
+  -- Apagado por defecto: son códigos de portón y llaves de casas ajenas.
+  calendario_incluye_notas boolean not null default false
 );
 
 -- ---------------------------------------------------------
@@ -297,3 +303,20 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function fn_nuevo_paseador();
+
+-- =========================================================
+-- FEED DE CALENDARIO (spec §7)
+-- Las dos funciones que lo sostienen viven en
+-- `docs/migraciones/001-feed-calendario.sql`, con el porqué escrito:
+--
+--   fn_agenda_por_token(token, desde, hasta) -> jsonb
+--     SECURITY DEFINER. La llama la llave `anon` desde el servidor que arma
+--     el .ics, porque una app de calendario no puede autenticarse. Quien
+--     autoriza es el token, validado adentro. Evita tener que sacar la llave
+--     `service_role` de Supabase.
+--
+--   fn_regenerar_token_calendario() -> text
+--     SECURITY INVOKER: exige sesión y RLS la limita a la fila del paseador.
+--     Es función y no un update directo para que el token lo genere la base
+--     y no se pueda escribir uno elegido a mano.
+-- =========================================================

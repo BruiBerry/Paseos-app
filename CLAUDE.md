@@ -16,13 +16,24 @@ La cascada de duración está completa desde que se agregaron
 `paseo.duracion_min` y `paseo.pausado_seg` (11 de agosto de 2026). Los dos
 huecos del esquema que bloqueaban parte de la especificación ya no existen.
 
-Sin construir, en orden de valor: feed `.ics`, cierre y materialización
-agendados en la base, notificaciones push y correos (necesitan servidor),
-offline completo, layout de escritorio.
+Sin construir, en orden de valor: cierre y materialización agendados en la
+base, notificaciones push y correos, offline completo, layout de escritorio.
 
 El despliegue es Vercel, conectado a `main`: cada push publica. `vercel.json`
 tiene el rewrite de SPA, sin el cual recargar en `/paseo/:id` daría 404, y
-saca del caché a `sw.js` para que la PWA pueda actualizarse sola.
+saca del caché a `sw.js` para que la PWA pueda actualizarse sola. El rewrite
+excluye `/api`, que si no se tragaría el feed.
+
+Los cambios de esquema posteriores al inicial van en `docs/migraciones/`,
+numerados, y se ejecutan a mano en el editor SQL de Supabase.
+
+**La llave `service_role` no sale de Supabase.** El feed `.ics` lo pide una
+app de calendario sin sesión posible, y la salida fácil habría sido darle esa
+llave al servidor. En vez de eso, `fn_agenda_por_token` es SECURITY DEFINER y
+valida el token adentro, así que a `api/calendario/[token].js` le basta la
+llave `anon` que ya es pública. Si algún día hace falta algo parecido, este es
+el patrón: función SECURITY DEFINER con su propio secreto, no una llave que se
+salta RLS viajando fuera.
 
 **La materialización corre en el cliente**, al abrir Hoy, una vez al día
 (`materializarUnaVezAlDia`). Si el paseador no abre la app, no se generan
@@ -83,8 +94,17 @@ curl -s -G "$VITE_SUPABASE_URL/rest/v1/paseo" \
 ```
 
 **No hay tests.** `npm run build` atrapa los errores de sintaxis y de import,
-nada más. Las funciones puras de `fechas.js` se pueden verificar con
-`node --input-type=module`.
+nada más. Los módulos puros —`fechas.js`, `duracion.js`, `ics.js`, y
+`cierrePorOlvido` de `paseos.js`— se pueden verificar con `node`, y por eso
+están separados de todo lo que toca la red. Al escribir esas pruebas en la
+línea de comandos, ojo con las barras invertidas: pasan por bash y por JS, y
+una prueba del escapado de `.ics` puede fallar por el shell y no por el código.
+
+**La cascada de duración vive en `duracion.js`, no en `paseos.js`.** La
+comparten el navegador y la función de servidor del feed; `paseos.js` importa
+el cliente de Supabase y no carga fuera de Vite. `paseos.js` la reexporta,
+así que las pantallas no notan la diferencia. `ics.js` importa con extensión
+`.js` explícita porque corre en Node, donde no hay resolución al estilo Vite.
 
 ## Convenciones
 

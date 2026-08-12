@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient'
 import { SELECT_PASEO } from './consultas'
 import { hoyISO } from './fechas'
+import { duracionPrevistaDePaseo } from './duracion'
 
 // Crear un paseo, calcular su precio y cerrarlo. Todo lo que toca dinero
 // pasa por acá para que exista un solo lugar donde el precio se congela.
@@ -16,37 +17,10 @@ export async function perrosDeGrupo(grupoId) {
   return (data ?? []).map((f) => f.perro).filter((p) => p && p.activo)
 }
 
-/**
- * Cascada de duración prevista, en minutos (spec §4):
- *   1. la escrita a mano al agendar ese paseo (`paseo.duracion_min`)
- *   2. si no, la de la regla recurrente
- *   3. si no, la más larga entre los perros que participan — no se puede
- *      pasear a uno 45 minutos y a otro 60 al mismo tiempo
- *   4. si no, la default del paseador
- *
- * Cada paso se salta con null, no con cero: `duracion_min = 0` no es un
- * paseo de duración indefinida, es un dato malo, y dejarlo caer al paso
- * siguiente es más útil que mostrar un cronómetro que nace excedido.
- */
-export function duracionPrevistaMin({ propiaMin, recurrenteMin, perros, config }) {
-  if (propiaMin) return propiaMin
-  if (recurrenteMin) return recurrenteMin
-
-  const propias = (perros ?? []).map((p) => p?.duracion_min).filter(Boolean)
-  if (propias.length) return Math.max(...propias)
-
-  return config?.duracion_default_min ?? 60
-}
-
-/** La misma cascada, leyendo un paseo tal como lo devuelven las consultas. */
-export function duracionPrevistaDePaseo(paseo, config) {
-  return duracionPrevistaMin({
-    propiaMin: paseo?.duracion_min,
-    recurrenteMin: paseo?.paseo_recurrente?.duracion_min,
-    perros: (paseo?.paseo_perro ?? []).map((pp) => pp.perro),
-    config
-  })
-}
+// La cascada de duración vive en `duracion.js`, sin dependencias, porque la
+// comparte con la función de servidor del feed. Se reexporta acá para no
+// obligar a las pantallas a saber de esa separación.
+export { duracionPrevistaMin, duracionPrevistaDePaseo } from './duracion'
 
 /**
  * Precio de cada perro dentro de un mismo paseo.

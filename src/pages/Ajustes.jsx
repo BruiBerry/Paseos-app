@@ -109,6 +109,8 @@ export default function Ajustes() {
         </button>
       </form>
 
+      <FeedCalendario config={config} paseadorId={paseadorId} recargarConfig={recargarConfig} />
+
       <div style={{ marginTop: 32, paddingTop: 16, borderTop: '0.5px solid var(--borde)' }}>
         <p className="micro">Sesión iniciada como {sesion?.user?.email}</p>
         <p className="micro">
@@ -119,6 +121,126 @@ export default function Ajustes() {
           Cerrar sesión
         </button>
       </div>
+    </div>
+  )
+}
+
+/**
+ * La suscripción del calendario (spec §7).
+ *
+ * La URL es la contraseña: quien la tenga ve la agenda completa sin
+ * necesidad de contraseña ni sesión. Por eso la pantalla la trata como un
+ * secreto —se muestra tapada— y ofrece regenerarla, que es lo único que
+ * revoca el acceso de una copia que se compartió de más.
+ */
+function FeedCalendario({ config, paseadorId, recargarConfig }) {
+  const [visible, setVisible] = useState(false)
+  const [copiado, setCopiado] = useState(false)
+  const [trabajando, setTrabajando] = useState(false)
+
+  const url = config?.token_calendario
+    ? `${window.location.origin}/api/calendario/${config.token_calendario}`
+    : null
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiado(true)
+      setTimeout(() => setCopiado(false), 2000)
+    } catch {
+      // Sin permiso de portapapeles no queda más que mostrarla para copiar a mano.
+      setVisible(true)
+    }
+  }
+
+  async function regenerar() {
+    const seguro = window.confirm(
+      'La dirección actual dejará de funcionar y el calendario de tu teléfono ' +
+      'quedará vacío hasta que lo suscribas de nuevo. ¿Continuar?'
+    )
+    if (!seguro) return
+    setTrabajando(true)
+    const { error } = await supabase.rpc('fn_regenerar_token_calendario')
+    setTrabajando(false)
+    if (error) { console.error(error); return }
+    setVisible(false)
+    await recargarConfig()
+  }
+
+  async function alternarNotas(e) {
+    const incluir = e.target.checked
+    if (incluir) {
+      const seguro = window.confirm(
+        'Las notas de acceso son códigos de portón y dónde están las llaves de ' +
+        'casas de tus clientes. Encender esto las copia al calendario de tu ' +
+        'teléfono y a su respaldo en la nube. ¿Continuar?'
+      )
+      if (!seguro) { e.target.checked = false; return }
+    }
+    setTrabajando(true)
+    const { error } = await supabase
+      .from('configuracion')
+      .update({ calendario_incluye_notas: incluir })
+      .eq('paseador_id', paseadorId)
+    setTrabajando(false)
+    if (error) { console.error(error); return }
+    await recargarConfig()
+  }
+
+  if (!url) return null
+
+  return (
+    <div style={{ marginTop: 32, paddingTop: 16, borderTop: '0.5px solid var(--borde)' }}>
+      <h2 style={{ marginBottom: 10 }}>Calendario</h2>
+      <p className="micro">
+        Suscribe esta dirección en el calendario de tu teléfono y los paseos
+        aparecen junto al resto de tu agenda. Tu teléfono decide cada cuánto la
+        revisa, así que un cambio de última hora puede tardar en reflejarse.
+      </p>
+
+      <div className="tarjeta" style={{ marginTop: 10 }}>
+        <div className="micro" style={{ wordBreak: 'break-all', fontFamily: 'monospace' }}>
+          {visible ? url : '••••••••••••••••••••••••••••••••'}
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <button className="boton chico" onClick={() => setVisible((v) => !v)}>
+            {visible ? 'Ocultar' : 'Mostrar'}
+          </button>
+          <button className="boton chico" onClick={copiar}>
+            {copiado ? 'Copiada' : 'Copiar'}
+          </button>
+        </div>
+      </div>
+
+      <p className="micro" style={{ marginTop: 10 }}>
+        Cualquiera con esta dirección puede ver tu agenda: no pide contraseña.
+        Trátala como una.
+      </p>
+
+      <label className="fila" style={{ marginTop: 12, cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={Boolean(config.calendario_incluye_notas)}
+          onChange={alternarNotas}
+          disabled={trabajando}
+        />
+        <div className="crece">
+          <div>Incluir notas de acceso</div>
+          <div className="micro">
+            Códigos de portón y dónde están las llaves. Apagado, esa información
+            se queda solo dentro de la app.
+          </div>
+        </div>
+      </label>
+
+      <button
+        className="boton ancho"
+        style={{ marginTop: 12 }}
+        onClick={regenerar}
+        disabled={trabajando}
+      >
+        {trabajando ? 'Trabajando…' : 'Generar una dirección nueva'}
+      </button>
     </div>
   )
 }
