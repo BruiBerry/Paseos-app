@@ -3,7 +3,7 @@ import { supabase } from './supabaseClient'
 // Suscripción a notificaciones push (spec §6). Lo que decide qué avisar vive
 // en la base; esto solo registra este dispositivo para recibirlos.
 
-const CLAVE_VAPID = import.meta.env.VITE_VAPID_PUBLIC_KEY
+const CLAVE_VAPID = import.meta.env.VAPID_PUBLIC_KEY
 
 // La clave VAPID pública viaja en base64url y `subscribe` la pide en bytes.
 function claveABytes(base64url) {
@@ -49,7 +49,7 @@ export async function estadoPush() {
  * permiso pedido fuera de un gesto del usuario.
  */
 export async function activarPush(paseadorId) {
-  if (!CLAVE_VAPID) throw new Error('Falta VITE_VAPID_PUBLIC_KEY en el entorno')
+  if (!CLAVE_VAPID) throw new Error('Falta VAPID_PUBLIC_KEY en el entorno')
 
   const permiso = await Notification.requestPermission()
   if (permiso !== 'granted') return 'bloqueado'

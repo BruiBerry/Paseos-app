@@ -3,6 +3,12 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  // Vite solo deja pasar al navegador las variables con prefijo `VITE_`.
+  // La clave VAPID pública se llama `VAPID_PUBLIC_KEY` (Vercel no aceptó el
+  // nombre con `VITE_`), así que se agrega ese prefijo a la lista. Es
+  // `VAPID_PUBLIC_` y no `VAPID_`: con el segundo, la clave privada
+  // (`VAPID_PRIVATE_KEY`) terminaría incrustada en el JavaScript público.
+  envPrefix: ['VITE_', 'VAPID_PUBLIC_'],
   plugins: [
     react(),
     VitePWA({

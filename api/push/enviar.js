@@ -60,7 +60,7 @@ export default async function handler(req, res) {
 
   const url = process.env.VITE_SUPABASE_URL
   const anonKey = process.env.VITE_SUPABASE_ANON_KEY
-  const vapidPublica = process.env.VITE_VAPID_PUBLIC_KEY
+  const vapidPublica = process.env.VAPID_PUBLIC_KEY
   const vapidPrivada = process.env.VAPID_PRIVATE_KEY
   const vapidContacto = process.env.VAPID_SUBJECT
   if (!url || !anonKey || !vapidPublica || !vapidPrivada || !vapidContacto) {

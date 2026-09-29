@@ -78,7 +78,7 @@ que vive únicamente en la tabla `secreto_servidor`.
 
 Para ponerlo en marcha, en este orden:
 
-1. `npx web-push generate-vapid-keys`. La pública va en `VITE_VAPID_PUBLIC_KEY`
+1. `npx web-push generate-vapid-keys`. La pública va en `VAPID_PUBLIC_KEY`
    y la privada en `VAPID_PRIVATE_KEY`, las dos en las variables de entorno de
    Vercel, junto a `VAPID_SUBJECT` (`mailto:tu-correo`). Redeploy.
 2. Habilita `pg_net` en Supabase (Database → Extensions).
