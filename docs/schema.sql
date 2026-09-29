@@ -312,3 +312,20 @@ create trigger on_auth_user_created
 --     Es función y no un update directo para que el token lo genere la base
 --     y no se pueda escribir uno elegido a mano.
 -- =========================================================
+
+-- =========================================================
+-- NOTIFICACIONES PUSH (spec §6)
+-- Viven en `docs/migraciones/004-notificaciones-push.sql`, con el porqué
+-- escrito. Resumen de lo que agregan:
+--
+--   suscripcion_push          un dispositivo por fila; RLS "propio"
+--   secreto_servidor          RLS sin políticas: solo funciones DEFINER y cron
+--   paseo.aviso_olvido_1_en / aviso_olvido_2_en
+--                             se marcan solo si algún dispositivo lo recibió
+--   fn_avisos_pendientes(secreto)          qué avisar; valida el secreto adentro
+--   fn_registrar_avisos(secreto, resultados)
+--   fn_suscripciones_push(secreto)         para el aviso de prueba
+--   fn_cerrar_olvidados_paseador           reemplazada: cierra a 15 min tras el
+--                                          segundo aviso entregado, o a 180
+--   jobs de cron: `cerrar-olvidados` pasa a cada 5 min; `enviar-avisos` nuevo
+-- =========================================================

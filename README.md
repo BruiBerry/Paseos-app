@@ -53,13 +53,53 @@ Dos cosas corren solas dentro de Postgres, con `pg_cron`:
 - **Materializar** las reglas recurrentes en filas reales de `paseo`,
   manteniendo 8 semanas hacia adelante. Diaria, 07:00 UTC (madrugada en Chile).
 - **Cerrar** los paseos que quedaron `en_curso` porque se olvidó apretar
-  Terminar. Cada hora.
+  Terminar. Cada 5 minutos.
+
+Y un tercero llama al servidor de Vercel: **enviar avisos** push, cada 5
+minutos (ver "Notificaciones push" más abajo).
 
 La lógica vive solo en SQL. La app llama a las mismas funciones al abrir Hoy
 para ver el efecto de inmediato, pero no depende de eso: aunque nadie abra la
 app, los paseos se generan y los olvidados se cierran.
 
 Para ver o cambiar los horarios: `select * from cron.job;`
+
+## Notificaciones push
+
+Primer corte: el aviso de **paseo sin cerrar**. Un paseo que pasa 15 minutos
+de su duración recibe un aviso; a los 30, un segundo; y 15 minutos después del
+segundo se cierra solo. El cierre a 15 minutos solo vale si el segundo aviso
+*se entregó*: sin push activo, o con el servicio caído, sigue rigiendo el
+margen de 180 minutos.
+
+Qué avisar lo decide SQL (`fn_avisos_pendientes`); `api/push/enviar.js` solo
+firma con VAPID y envía. El cron lo llama con `pg_net`, mandando un secreto
+que vive únicamente en la tabla `secreto_servidor`.
+
+Para ponerlo en marcha, en este orden:
+
+1. `npx web-push generate-vapid-keys`. La pública va en `VITE_VAPID_PUBLIC_KEY`
+   y la privada en `VAPID_PRIVATE_KEY`, las dos en las variables de entorno de
+   Vercel, junto a `VAPID_SUBJECT` (`mailto:tu-correo`). Redeploy.
+2. Habilita `pg_net` en Supabase (Database → Extensions).
+3. Ejecuta `docs/migraciones/004-notificaciones-push.sql`. Crea la tabla
+   `secreto_servidor`; el job de avisos falla en silencio hasta el paso 4.
+4. Carga los secretos, con un secreto generado por ti (`crypto.randomBytes`):
+   `insert into secreto_servidor (nombre, valor) values ('push', '…'),
+   ('push_url', 'https://TU-APP.vercel.app/api/push/enviar')
+   on conflict (nombre) do update set valor = excluded.valor;`
+5. En el teléfono, abre la app instalada → Ajustes → Notificaciones y actívalas.
+
+Para probar un dispositivo sin esperar un paseo atrasado:
+
+```bash
+curl -X POST "https://TU-APP.vercel.app/api/push/enviar?prueba=1" \
+  -H "Authorization: Bearer EL_SECRETO"
+```
+
+Si algo no llega, `select * from cron.job_run_details order by start_time
+desc limit 10;` muestra si el job corrió, y `select * from
+net._http_response order by created desc limit 5;` qué respondió Vercel.
 
 ## Feed de calendario
 
@@ -131,8 +171,10 @@ anidado devuelve 400 en tiempo de ejecución, no al compilar.
 
 ## Qué falta
 
-- **Notificaciones push y correos.** Los horarios se guardan en Ajustes,
-  pero no se envía nada: necesita trabajo de servidor.
+- **Resto de las notificaciones.** Falta el resumen del día (7:30), el paseo
+  próximo (30 min antes) y los dos correos. `hora_resumen_diario` y
+  `minutos_aviso_previo` se guardan en Ajustes pero todavía no se usan. La
+  base de push ya existe: cada aviso nuevo es una función SQL más.
 - **Offline completo.** Solo el cronómetro sobrevive sin señal (cola en
   `localStorage`). El resto de las pantallas requiere conexión.
 - **Pedir la instalación en el onboarding.** El push en iOS solo llega si la

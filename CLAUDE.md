@@ -16,11 +16,14 @@ La cascada de duración está completa desde que se agregaron
 `paseo.duracion_min` y `paseo.pausado_seg` (11 de agosto de 2026). Los dos
 huecos del esquema que bloqueaban parte de la especificación ya no existen.
 
-Sin construir, en orden de valor: notificaciones push y correos, offline
-completo, pedir la instalación en el onboarding, layout de escritorio.
+Notificaciones push: escrito el primer corte (aviso de paseo sin cerrar,
+migración 004), pendiente de activar en Supabase y Vercel — los pasos están
+en el README. Sin construir, en orden de valor: el resto de las
+notificaciones (resumen del día, paseo próximo, correos), offline completo,
+pedir la instalación en el onboarding, layout de escritorio.
 
 **El cierre y la materialización corren en la base, con `pg_cron`.** El
-cierre cada hora, la materialización a las 07:00 UTC. La lógica vive solo en
+cierre cada 5 minutos, la materialización a las 07:00 UTC. La lógica vive solo en
 SQL; el navegador llama a las mismas funciones por RPC al abrir Hoy, para ver
 el efecto de inmediato en vez de esperar la próxima corrida. Las funciones
 `_todos` son SECURITY DEFINER —un job de cron no tiene `auth.uid()`— y
@@ -69,12 +72,24 @@ Todo lo que toca dinero pasa por `src/lib/paseos.js`.
 
 **El recargo por perro adicional se cuenta por casa, no por grupo.**
 
-**El cierre automático usa 180 minutos, no los 15 de la especificación.**
-La spec supone que existen los avisos: notifica, insiste, y recién entonces
-cierra. Sin notificaciones no hay "los ignoró" que detectar, y cerrar a los
-15 minutos mataría por la espalda un paseo que de verdad se alargó — y de
-paso marcaría los perros como completados, que es dinero. Con avisos, vuelve
-a 15: la constante `MARGEN_OLVIDO_MIN` ya está escrita esperando ese día.
+**El cierre automático espera a que el aviso se haya entregado; si no, usa
+180 minutos.** La spec supone que existen los avisos: notifica, insiste, y
+recién entonces cierra. Sin notificaciones no hay "los ignoró" que detectar,
+y cerrar a los 15 minutos mataría por la espalda un paseo que de verdad se
+alargó — y de paso marcaría los perros como completados, que es dinero. La
+escalera es prevista+15 primer aviso, +30 segundo, y 15 minutos después del
+segundo se cierra, pero solo si `paseo.aviso_olvido_2_en` está marcado, y eso
+ocurre únicamente cuando algún dispositivo recibió el push. Sin suscripción
+activa, o con el servicio de push caído, rige el margen de 180. Los números
+(15, 30, 15, 180) viven en SQL, repetidos entre `fn_avisos_pendientes` y
+`fn_cerrar_olvidados_paseador`: si cambias uno, cambia el otro.
+
+**El servidor de push no toma decisiones.** `api/push/enviar.js` firma con
+VAPID y envía lo que `fn_avisos_pendientes` le devuelve. Es SECURITY DEFINER
+con el secreto de la tabla `secreto_servidor` —mismo patrón que el feed—; el
+secreto no está en el entorno de Vercel y `service_role` sigue sin salir de
+Supabase. Una suscripción caducada (404/410) queda `activa = false`, no se
+borra.
 
 **Nada se borra.** Cancelar cambia el estado; dar de baja marca
 `activo = false`. La única excepción escrita a propósito: al pausar una regla

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabaseClient'
 import { useSesion } from '../lib/sesion'
 import { pesos } from '../lib/formato'
 import { hora as soloHora } from '../lib/fechas'
+import { estadoPush, activarPush, desactivarPush } from '../lib/push'
 import { Barra, Campo, Cargando } from '../components/ui'
 
 export default function Ajustes() {
@@ -99,8 +100,8 @@ export default function Ajustes() {
           />
         </Campo>
         <p className="aviso info" style={{ marginBottom: 16 }}>
-          Estos horarios quedan guardados, pero todavía no se envía ninguna notificación:
-          eso necesita el trabajo del servidor que aún no existe.
+          Estos horarios quedan guardados, pero todavía no se usan. Por ahora el único
+          aviso que llega es el de un paseo que se pasó de su duración.
         </p>
 
         {mensaje && <p className={mensaje === 'Guardado.' ? 'micro' : 'error'}>{mensaje}</p>}
@@ -108,6 +109,8 @@ export default function Ajustes() {
           {guardando ? 'Guardando…' : 'Guardar ajustes'}
         </button>
       </form>
+
+      <AvisosPush paseadorId={paseadorId} />
 
       <FeedCalendario config={config} paseadorId={paseadorId} recargarConfig={recargarConfig} />
 
@@ -121,6 +124,83 @@ export default function Ajustes() {
           Cerrar sesión
         </button>
       </div>
+    </div>
+  )
+}
+
+/**
+ * Avisos push en ESTE dispositivo (spec §6).
+ *
+ * La suscripción es por dispositivo, no por cuenta: activarlos en el
+ * teléfono no los enciende en otro navegador donde también tengas la sesión.
+ * En iPhone solo funcionan con la app instalada en la pantalla de inicio, así
+ * que ese caso explica qué hacer en vez de mostrar un botón que no serviría.
+ */
+function AvisosPush({ paseadorId }) {
+  const [estado, setEstado] = useState(null)
+  const [trabajando, setTrabajando] = useState(false)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    estadoPush().then(setEstado).catch((e) => { console.error(e); setEstado('no-soportado') })
+  }, [])
+
+  async function alternar(e) {
+    setTrabajando(true)
+    setError(null)
+    try {
+      if (e.target.checked) setEstado(await activarPush(paseadorId))
+      else { await desactivarPush(); setEstado('inactivo') }
+    } catch (err) {
+      console.error(err)
+      setError('No se pudo cambiar. Intenta de nuevo.')
+      setEstado(await estadoPush())
+    }
+    setTrabajando(false)
+  }
+
+  if (!estado) return null
+
+  return (
+    <div style={{ marginTop: 32, paddingTop: 16, borderTop: '0.5px solid var(--borde)' }}>
+      <h2 style={{ marginBottom: 10 }}>Notificaciones</h2>
+
+      {estado === 'requiere-instalar' && (
+        <p className="aviso info">
+          En iPhone los avisos solo llegan con la app instalada. En Safari toca
+          Compartir → «Agregar a pantalla de inicio», ábrela desde ahí y vuelve
+          a esta pantalla.
+        </p>
+      )}
+      {estado === 'no-soportado' && (
+        <p className="aviso info">Este navegador no admite notificaciones.</p>
+      )}
+      {estado === 'bloqueado' && (
+        <p className="aviso info">
+          Las notificaciones están bloqueadas para esta app. Actívalas en los
+          ajustes del teléfono o del navegador y vuelve aquí.
+        </p>
+      )}
+      {(estado === 'activo' || estado === 'inactivo') && (
+        <>
+          <label className="fila" style={{ cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={estado === 'activo'}
+              onChange={alternar}
+              disabled={trabajando}
+            />
+            <div className="crece">
+              <div>Recibir avisos en este dispositivo</div>
+              <div className="micro">
+                Te avisa cuando un paseo se pasa de su duración, antes de que la app
+                lo cierre sola.
+              </div>
+            </div>
+          </label>
+          {error && <p className="error">{error}</p>}
+        </>
+      )}
     </div>
   )
 }

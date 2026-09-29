@@ -7,6 +7,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // El manejo de push va en un archivo aparte que el SW generado importa,
+      // en vez de pasar a `injectManifest` y escribir el SW entero a mano.
+      workbox: { importScripts: ['push-sw.js'] },
       manifest: {
         name: 'Paseos',
         short_name: 'Paseos',
