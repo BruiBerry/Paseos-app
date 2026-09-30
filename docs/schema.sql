@@ -329,3 +329,10 @@ create trigger on_auth_user_created
 --                                          segundo aviso entregado, o a 180
 --   jobs de cron: `cerrar-olvidados` pasa a cada 5 min; `enviar-avisos` nuevo
 -- =========================================================
+
+-- Aviso de paseo próximo (spec §6): `docs/migraciones/005-aviso-paseo-proximo.sql`.
+--   paseo.aviso_proximo_en          se marca en todos los paseos de un bloque
+--   fn_avisos_olvido_pendientes()   los de "sin cerrar", movidos desde la 004
+--   fn_avisos_proximo_pendientes()  bloques de paseos a menos de 45 min
+--   fn_avisos_pendientes(secreto)   ahora solo valida y junta las dos listas
+--   Las dos funciones por tipo tienen el execute revocado: no validan a nadie.

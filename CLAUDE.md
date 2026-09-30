@@ -16,11 +16,11 @@ La cascada de duración está completa desde que se agregaron
 `paseo.duracion_min` y `paseo.pausado_seg` (11 de agosto de 2026). Los dos
 huecos del esquema que bloqueaban parte de la especificación ya no existen.
 
-Notificaciones push: escrito el primer corte (aviso de paseo sin cerrar,
-migración 004), pendiente de activar en Supabase y Vercel — los pasos están
-en el README. Sin construir, en orden de valor: el resto de las
-notificaciones (resumen del día, paseo próximo, correos), offline completo,
-pedir la instalación en el onboarding, layout de escritorio.
+Notificaciones push funcionando: aviso de paseo sin cerrar (migración 004)
+y de paseo próximo (005). Los pasos de activación están en el README. Sin
+construir, en orden de valor: el resto de las notificaciones (resumen del
+día, correos), pedir la instalación en el onboarding, offline completo,
+layout de escritorio.
 
 **El cierre y la materialización corren en la base, con `pg_cron`.** El
 cierre cada 5 minutos, la materialización a las 07:00 UTC. La lógica vive solo en
@@ -90,6 +90,16 @@ con el secreto de la tabla `secreto_servidor` —mismo patrón que el feed—; e
 secreto no está en el entorno de Vercel y `service_role` sigue sin salir de
 Supabase. Una suscripción caducada (404/410) queda `activa = false`, no se
 borra.
+
+**La hora de un paseo son dos columnas, en hora local de Chile.** `fecha` y
+`hora_programada`; en SQL se convierten con `(fecha + hora_programada) at
+time zone 'America/Santiago'` antes de compararlas con `now()`. Sin eso los
+avisos salen corridos tres o cuatro horas, y el corrimiento cambia con el
+horario de verano. Es el bug de las fechas locales, en SQL.
+
+**El push nunca lleva `notas_acceso`.** Son códigos de portón y dónde está la
+llave de casas ajenas, y una notificación queda en la pantalla de bloqueo.
+Solo direcciones.
 
 **Nada se borra.** Cancelar cambia el estado; dar de baja marca
 `activo = false`. La única excepción escrita a propósito: al pausar una regla

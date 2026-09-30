@@ -100,8 +100,8 @@ export default function Ajustes() {
           />
         </Campo>
         <p className="aviso info" style={{ marginBottom: 16 }}>
-          Estos horarios quedan guardados, pero todavía no se usan. Por ahora el único
-          aviso que llega es el de un paseo que se pasó de su duración.
+          El aviso previo ya se usa. La hora del resumen diario queda guardada, pero
+          todavía no se envía ese aviso.
         </p>
 
         {mensaje && <p className={mensaje === 'Guardado.' ? 'micro' : 'error'}>{mensaje}</p>}
@@ -193,8 +193,8 @@ function AvisosPush({ paseadorId }) {
             <div className="crece">
               <div>Recibir avisos en este dispositivo</div>
               <div className="micro">
-                Te avisa cuando un paseo se pasa de su duración, antes de que la app
-                lo cierre sola.
+                Te avisa antes de cada paseo, con la dirección, y cuando uno se pasa
+                de su duración, antes de que la app lo cierre sola.
               </div>
             </div>
           </label>

@@ -66,7 +66,16 @@ Para ver o cambiar los horarios: `select * from cron.job;`
 
 ## Notificaciones push
 
-Primer corte: el aviso de **paseo sin cerrar**. Un paseo que pasa 15 minutos
+Hay dos avisos.
+
+**Paseo próximo.** Un push `minutos_aviso_previo` antes del paseo (Ajustes,
+30 por defecto), con las direcciones en el cuerpo. Los paseos ya iniciados,
+cancelados o sin perros no avisan. Si entre el fin previsto de un paseo y el
+inicio del siguiente hay menos de 45 minutos, van en un solo aviso que los
+nombra a todos. Las notas de acceso nunca van en el push: quedan en la
+pantalla de bloqueo. Migración `005`.
+
+**Paseo sin cerrar.** Un paseo que pasa 15 minutos
 de su duración recibe un aviso; a los 30, un segundo; y 15 minutos después del
 segundo se cierra solo. El cierre a 15 minutos solo vale si el segundo aviso
 *se entregó*: sin push activo, o con el servicio caído, sigue rigiendo el
@@ -88,6 +97,7 @@ Para ponerlo en marcha, en este orden:
    `insert into secreto_servidor (nombre, valor) values ('push', '…'),
    ('push_url', 'https://TU-APP.vercel.app/api/push/enviar')
    on conflict (nombre) do update set valor = excluded.valor;`
+   Después de la 004, ejecuta también la `005` (paseo próximo).
 5. En el teléfono, abre la app instalada → Ajustes → Notificaciones y actívalas.
 
 Para probar un dispositivo sin esperar un paseo atrasado:
@@ -171,10 +181,9 @@ anidado devuelve 400 en tiempo de ejecución, no al compilar.
 
 ## Qué falta
 
-- **Resto de las notificaciones.** Falta el resumen del día (7:30), el paseo
-  próximo (30 min antes) y los dos correos. `hora_resumen_diario` y
-  `minutos_aviso_previo` se guardan en Ajustes pero todavía no se usan. La
-  base de push ya existe: cada aviso nuevo es una función SQL más.
+- **Resto de las notificaciones.** Falta el resumen del día (7:30) y los dos
+  correos. `hora_resumen_diario` se guarda en Ajustes pero todavía no se usa.
+  La base de push ya existe: cada aviso nuevo es una función SQL más.
 - **Offline completo.** Solo el cronómetro sobrevive sin señal (cola en
   `localStorage`). El resto de las pantallas requiere conexión.
 - **Pedir la instalación en el onboarding.** El push en iOS solo llega si la
