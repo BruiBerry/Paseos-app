@@ -106,11 +106,12 @@ export default async function handler(req, res) {
   const caducadas = new Set()
   for (const aviso of avisos) {
     // `paseo_ids` solo viene en los avisos de bloque (paseo próximo): la base
-    // necesita saber qué paseos cubría para marcarlos todos. No es parte de
-    // lo que se le muestra al paseador.
-    const { suscripciones, paseo_id, paseo_ids, tipo, ...payload } = aviso
+    // necesita saber qué paseos cubría para marcarlos todos. `paseador_id`
+    // solo viene en el resumen del día, que es del paseador y no de un paseo.
+    // Ninguno de los dos es parte de lo que se le muestra al paseador.
+    const { suscripciones, paseo_id, paseo_ids, paseador_id, tipo, ...payload } = aviso
     const r = await enviarATodas(suscripciones, payload)
-    resultadoAvisos.push({ paseo_id, paseo_ids, tipo, entregado: r.entregado })
+    resultadoAvisos.push({ paseo_id, paseo_ids, paseador_id, tipo, entregado: r.entregado })
     r.caducadas.forEach((e) => caducadas.add(e))
   }
 

@@ -100,8 +100,8 @@ export default function Ajustes() {
           />
         </Campo>
         <p className="aviso info" style={{ marginBottom: 16 }}>
-          El aviso previo ya se usa. La hora del resumen diario queda guardada, pero
-          todavía no se envía ese aviso.
+          Los dos avisos ya se usan. El resumen diario solo sale si ese día hay
+          paseos, y hasta 2 horas después de la hora elegida.
         </p>
 
         {mensaje && <p className={mensaje === 'Guardado.' ? 'micro' : 'error'}>{mensaje}</p>}

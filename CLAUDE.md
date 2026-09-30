@@ -16,10 +16,10 @@ La cascada de duración está completa desde que se agregaron
 `paseo.duracion_min` y `paseo.pausado_seg` (11 de agosto de 2026). Los dos
 huecos del esquema que bloqueaban parte de la especificación ya no existen.
 
-Notificaciones push funcionando: aviso de paseo sin cerrar (migración 004)
-y de paseo próximo (005). Los pasos de activación están en el README. Sin
-construir, en orden de valor: el resto de las notificaciones (resumen del
-día, correos), pedir la instalación en el onboarding, offline completo,
+Notificaciones push funcionando: aviso de paseo sin cerrar (migración 004),
+de paseo próximo (005) y resumen del día (006). Los pasos de activación están en el README. Sin
+construir, en orden de valor: los correos (resumen
+semanal, cierre de mes), pedir la instalación en el onboarding, offline completo,
 layout de escritorio.
 
 **El cierre y la materialización corren en la base, con `pg_cron`.** El
