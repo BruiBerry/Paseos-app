@@ -98,6 +98,8 @@ URL del endpoint:
 Sin dominio verificado, Resend solo deja enviar desde `onboarding@resend.dev`
 y solo al correo de la propia cuenta: tiene que ser el mismo de `paseador.email`.
 
+**Primer arranque.** Hoy muestra una tarjeta compacta, "N pasos para dejar la app lista", mientras falte instalar la app o activar los avisos. Se calcula del estado real (¿está instalada?, ¿hay suscripción push?), así que desaparece sola al cumplirlos. En Android el botón abre el diálogo nativo de instalación; en iPhone explica Compartir → «Agregar a pantalla de inicio», y los avisos quedan bloqueados hasta instalar. "Ahora no" la oculta 14 días (`localStorage`). Componente `PendientesInicio`, lógica en `src/lib/instalacion.js`.
+
 **Paseo sin cerrar.** Un paseo que pasa 15 minutos
 de su duración recibe un aviso; a los 30, un segundo; y 15 minutos después del
 segundo se cierra solo. El cierre a 15 minutos solo vale si el segundo aviso
@@ -209,7 +211,4 @@ anidado devuelve 400 en tiempo de ejecución, no al compilar.
   La base de push ya existe: cada aviso nuevo es una función SQL más.
 - **Offline completo.** Solo el cronómetro sobrevive sin señal (cola en
   `localStorage`). El resto de las pantallas requiere conexión.
-- **Pedir la instalación en el onboarding.** El push en iOS solo llega si la
-  app está instalada en la pantalla de inicio, así que pedirlo no puede
-  quedar escondido en Ajustes (especificación §6).
 - **Layout de escritorio.** Todo está pensado a 480 px de ancho.

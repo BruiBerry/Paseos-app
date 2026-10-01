@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { esIOS, estaInstalada } from './instalacion'
 
 // Suscripción a notificaciones push (spec §6). Lo que decide qué avisar vive
 // en la base; esto solo registra este dispositivo para recibirlos.
@@ -11,16 +12,6 @@ function claveABytes(base64url) {
   const base64 = (base64url + relleno).replace(/-/g, '+').replace(/_/g, '/')
   const crudo = atob(base64)
   return Uint8Array.from(crudo, (c) => c.charCodeAt(0))
-}
-
-function esIOS() {
-  // iPadOS se presenta como Mac; el contacto táctil lo delata.
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-}
-
-function estaInstalada() {
-  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
 }
 
 /**

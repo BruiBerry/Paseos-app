@@ -16,11 +16,13 @@ La cascada de duración está completa desde que se agregaron
 `paseo.duracion_min` y `paseo.pausado_seg` (11 de agosto de 2026). Los dos
 huecos del esquema que bloqueaban parte de la especificación ya no existen.
 
+La tarjeta de primer arranque en Hoy (instalar la PWA y activar avisos) está construida y probada solo en lógica; falta verla en un teléfono real.
+
 Notificaciones push funcionando: aviso de paseo sin cerrar (migración 004),
 de paseo próximo (005) y resumen del día (006). Correo del resumen semanal
 construido (007, `api/correo/enviar.js`, vía Resend); falta activarlo. Los pasos de activación están en el README. Sin
 construir, en orden de valor: el correo de
-cierre de mes, pedir la instalación en el onboarding, offline completo,
+cierre de mes, offline completo,
 layout de escritorio.
 
 **El cierre y la materialización corren en la base, con `pg_cron`.** El

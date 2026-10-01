@@ -8,6 +8,7 @@ import { materializarUnaVezAlDia } from '../lib/recurrentes'
 import { SELECT_PASEO, tituloPaseo, clientesDePaseo } from '../lib/consultas'
 import { distanciaM, ubicacionActual } from '../lib/geo'
 import { Barra, Cargando, ErrorCarga, Punto, Vacio } from '../components/ui'
+import PendientesInicio from '../components/PendientesInicio'
 
 export default function Hoy() {
   const navegar = useNavigate()
@@ -96,6 +97,8 @@ export default function Hoy() {
   return (
     <div>
       <Barra titulo="Hoy" accion={<span className="micro">{fechaLarga(hoyISO())}</span>} />
+
+      <PendientesInicio />
 
       {enCurso && (
         <Link
