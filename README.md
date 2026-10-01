@@ -80,6 +80,24 @@ con cuántos paseos hay y a qué hora termina el día. Sin paseos, no se envía.
 Sale una vez al día y solo durante las 2 horas siguientes a esa hora. No lleva
 direcciones. Migración `006`.
 
+**Resumen semanal (correo).** El domingo a las 20:00, un correo con la semana
+que empieza al día siguiente: asunto `Tu semana: 14 paseos, $98.000`, los siete
+días con sus paseos y un bloque "necesita tu atención" con horarios que se
+pisan y clientes sin tarifa. Un choque es solo de horas superpuestas, sin
+estimar el traslado entre casas. Sin paseos esa semana, no se envía. Sale
+una vez por semana y solo hasta las 23:00. Migración `007`.
+
+Para activarlo: crea una cuenta en Resend, pon `RESEND_API_KEY` y
+`CORREO_REMITENTE` en las variables de Vercel, ejecuta la `007` y carga la
+URL del endpoint:
+
+   `insert into secreto_servidor (nombre, valor) values
+   ('correo_url', 'https://TU-APP.vercel.app/api/correo/enviar')
+   on conflict (nombre) do update set valor = excluded.valor;`
+
+Sin dominio verificado, Resend solo deja enviar desde `onboarding@resend.dev`
+y solo al correo de la propia cuenta: tiene que ser el mismo de `paseador.email`.
+
 **Paseo sin cerrar.** Un paseo que pasa 15 minutos
 de su duración recibe un aviso; a los 30, un segundo; y 15 minutos después del
 segundo se cierra solo. El cierre a 15 minutos solo vale si el segundo aviso
@@ -187,8 +205,7 @@ anidado devuelve 400 en tiempo de ejecución, no al compilar.
 
 ## Qué falta
 
-- **Resto de las notificaciones.** Faltan los dos correos (resumen semanal y
-  cierre de mes).
+- **Resto de las notificaciones.** Falta el correo de cierre de mes.
   La base de push ya existe: cada aviso nuevo es una función SQL más.
 - **Offline completo.** Solo el cronómetro sobrevive sin señal (cola en
   `localStorage`). El resto de las pantallas requiere conexión.

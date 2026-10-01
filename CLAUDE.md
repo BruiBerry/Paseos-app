@@ -17,9 +17,10 @@ La cascada de duración está completa desde que se agregaron
 huecos del esquema que bloqueaban parte de la especificación ya no existen.
 
 Notificaciones push funcionando: aviso de paseo sin cerrar (migración 004),
-de paseo próximo (005) y resumen del día (006). Los pasos de activación están en el README. Sin
-construir, en orden de valor: los correos (resumen
-semanal, cierre de mes), pedir la instalación en el onboarding, offline completo,
+de paseo próximo (005) y resumen del día (006). Correo del resumen semanal
+construido (007, `api/correo/enviar.js`, vía Resend); falta activarlo. Los pasos de activación están en el README. Sin
+construir, en orden de valor: el correo de
+cierre de mes, pedir la instalación en el onboarding, offline completo,
 layout de escritorio.
 
 **El cierre y la materialización corren en la base, con `pg_cron`.** El
